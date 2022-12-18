@@ -1,0 +1,539 @@
+1. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a new deployment called nginx-web with image nginx:1.16. Change the nginx image to 1.17.
+
+Scale the deployment to 2 replicas. Once all pods are running, rollback the changes back to the previous state.
+
+---
+
+k create deploy nginx-web --image  nginx:1.16 --dry-run=client -o yaml >>  nginx-web.yaml
+k apply -f nginx-web.yaml 
+k set image deploy nginx-web nginx=nginx:1.16 nginx=nginx:1.17
+k scale deploy nginx-web --replicas 2 
+k rollout undo deploy nginx-web
+
+2. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Take backup of etcd and store at /tmp/etcd-snapshot.db. You can use existing CA cert, Server cert and Server key configured for etcd.
+
+* To view existing cert and key location, you can describe etcd pod in kube-system namespace
+
+---
+
+k get pod -n kube-system 
+k describe etcd -n kube-system 
+
+or
+
+cd /etc/kubernetes/manifest
+cat etcd.yaml
+
+ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt  --cert=/etc/kubernetes/pki/etcd/server.crt  --key=/etc/kubernetes/pki/etcd/server.key \
+  snapshot save /tmp/etcd-snapshot.db
+  
+  3. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+You need to add new user Jim. Please create appropriate private key and CertificateSigningRequest for Jim.
+
+Also approve the CSR generated for user Jim
+
+---
+
+vim csr-jim.yaml
+
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: jim
+spec:
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ1ZqQ0NBVDRDQVFBd0VURVBNQTBHQTFVRUF3d0dZVzVuWld4aE1JSUJJakFOQmdrcWhraUc5dzBCQVFFRgpBQU9DQVE4QU1JSUJDZ0tDQVFFQTByczhJTHRHdTYxakx2dHhWTTJSVlRWMDNHWlJTWWw0dWluVWo4RElaWjBOCnR2MUZtRVFSd3VoaUZsOFEzcWl0Qm0wMUFSMkNJVXBGd2ZzSjZ4MXF3ckJzVkhZbGlBNVhwRVpZM3ExcGswSDQKM3Z3aGJlK1o2MVNrVHF5SVBYUUwrTWM5T1Nsbm0xb0R2N0NtSkZNMUlMRVI3QTVGZnZKOEdFRjJ6dHBoaUlFMwpub1dtdHNZb3JuT2wzc2lHQ2ZGZzR4Zmd4eW8ybmlneFNVekl1bXNnVm9PM2ttT0x1RVF6cXpkakJ3TFJXbWlECklmMXBMWnoyalVnald4UkhCM1gyWnVVV1d1T09PZnpXM01LaE8ybHEvZi9DdS8wYk83c0x0MCt3U2ZMSU91TFcKcW90blZtRmxMMytqTy82WDNDKzBERHk5aUtwbXJjVDBnWGZLemE1dHJRSURBUUFCb0FBd0RRWUpLb1pJaHZjTgpBUUVMQlFBRGdnRUJBR05WdmVIOGR4ZzNvK21VeVRkbmFjVmQ1N24zSkExdnZEU1JWREkyQTZ1eXN3ZFp1L1BVCkkwZXpZWFV0RVNnSk1IRmQycVVNMjNuNVJsSXJ3R0xuUXFISUh5VStWWHhsdnZsRnpNOVpEWllSTmU3QlJvYXgKQVlEdUI5STZXT3FYbkFvczFqRmxNUG5NbFpqdU5kSGxpT1BjTU1oNndLaTZzZFhpVStHYTJ2RUVLY01jSVUyRgpvU2djUWdMYTk0aEpacGk3ZnNMdm1OQUxoT045UHdNMGM1dVJVejV4T0dGMUtCbWRSeEgvbUNOS2JKYjFRQm1HCkkwYitEUEdaTktXTU0xMzhIQXdoV0tkNjVoVHdYOWl4V3ZHMkh4TG1WQzg0L1BHT0tWQW9FNkpsYWFHdTlQVmkKdjlOSjVaZlZrcXdCd0hKbzZXdk9xVlA3SVFjZmg3d0drWm89Ci0tLS0tRU5EIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLQo=
+  signerName: kubernetes.io/kube-apiserver-client
+  expirationSeconds: 86400  # one day
+  usages:
+  - client auth
+
+k apply -f csr-jim.yaml
+
+kubectl certificate approve jim
+
+4. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Deploy a pod called limit-test with resource limit of 1 CPU and 256Mi of memory . Use image nginx.
+
+---
+
+vim limit-test.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: limit-test
+spec:
+  containers:
+  - name: app
+    image: nginx
+    resources:
+      limits:
+        memory: "256Mi"
+        cpu: "1"
+        
+k apply   -f limit-test.yaml
+
+5. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Display ONLY names of those nodes which DO NOT have label node-role.kubernetes.io/master= configured.
+
+There should be only one column called NAME.
+
+---
+
+k get nodes
+k describe node k8s-master
+watch for labels
+
+or
+
+ kubectl get nodes -l='!node-role.kubernetes.io/master' -o=custom-columns=NAME:.metadata.name
+ 
+ 6. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+worker node: k8s-node-02
+
+A new member Ben joins your company. He is getting on-boarded and needs access to list and view the deployments. Create a new cluster wide role called read-only-cluster to grant necessary permissions to Ben.
+
+---
+
+k create clusterrole read-only-cluster --verb list,watch,get --resource deployments
+k create clusterrolebinding --clusterrole read-only-cluster --user ben
+ 
+7. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a ConfigMap by name test-cm with following data. Please use imperative commands for this task.
+
+Key               Value
+
+env              dev
+
+log_path     /var/log
+
+---
+
+k create cm test-cm  --from-literal=env=dev --from-literal=log_path=/var/log
+
+8. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Deploy a network policy called allow-only-namespace in webapp namespace. Make sure it allows ALL traffic ONLY from dev namespace.
+
+Note:
+
+1. Policy should NOT allow communication between pods in same namespace
+
+2. Traffic ONLY from dev namespace is allowed on ALL ports
+
+* Create necessary dependent resources
+
+---
+
+vim netpol.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-only-namespace
+  namespace: webapp
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: dev
+           
+k apply -f  netpol.yaml       
+      
+9. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a PersistentVolume by the name my-pv with storage 10Mi. Also configure appropriate access mode to Read multiple times.
+
+Create a PersistentVolumeClaim by the name my-pvc and bind with the PersistentVolume created above.
+
+---
+
+vim pv.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-pv
+spec:
+  capacity:
+    storage: 10Mi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Recycle
+
+k apply -f pv.yaml
+
+vim pvc.yaml
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc 
+spec:
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 10Mi
+      
+k apply -f  pvc.yaml
+
+10. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Scale up the application called web-app in dev namespace to 5 replicas. Make sure to record the change.
+
+---
+
+k scale deploy  web-app   -n dev --replicas 5 --record
+
+11. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+worker node: k8s-node-02
+
+Perform required steps to upgrade ONLY k8s-master and k8s-node-01 nodes to version 1.19.0 Drain k8s-master node first
+kubectl drain k8s-master
+SSH to k8s-master and run following commands:
+
+---
+
+#update master node
+
+kubectl drain k8s-master --ignore-daemonsets
+
+ ssh k8s-master
+ apt-mark unhold kubeadm && \
+ apt-get update && apt-get install -y kubeadm=1.19.0 && \
+ apt-mark hold kubeadm
+ 
+kubeadm upgrade plan
+sudo kubeadm upgrade apply v1.19.0
+
+apt-mark unhold kubelet kubectl && \
+apt-get update && apt-get install -y kubelet=1.19.0 kubectl=1.19.0 && \
+apt-mark hold kubelet kubectl
+
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+kubectl uncordon k8s-master
+
+kubectl drain  k8s-node-01 --ignore-daemonsets
+exit
+
+#update worker node
+ ssh k8s-node-01
+ 
+apt-mark unhold kubeadm && \
+apt-get update && apt-get install -y kubeadm=11.19.0 && \
+apt-mark hold kubeadm
+
+sudo kubeadm upgrade node
+
+apt-mark unhold kubelet kubectl && \
+apt-get update && apt-get install -y kubelet=1.19.0 kubectl=1.19.0 && \
+apt-mark hold kubelet kubectl
+
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+kubectl uncordon k8s-node-01
+
+12. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Deploy a pod called busybox with image=busybox and sleep the container for 4600 seconds.
+
+Configure the pod to access the storage in read-only mode. Volume can be mounted at /data mount point.
+
+* Create necessary resources required to achieve this.
+
+---
+
+vim busybox.yaml
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    command: ["sleep", 4600]
+    volumeMounts:
+    - mountPath: /data
+      name: busy-volume
+      readOnly: true 
+  volumes:
+  - name: busy-volume
+    persistentVolumeClaim:
+        claimName: busy-pvc
+
+
+vim busy-pvc.yaml
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: busy-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 8Gi
+
+k apply -f busy-pvc.yaml
+
+13. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Deploy a static pod called static-nginx-k8s-node-01 with nginx image.
+
+---
+
+cd /etc/kubernetes/manifest
+
+k run static-nginx-k8s-node-01 --image nginx --dry-run=client -o yaml >> static.yaml
+k apply -f static.yaml
+
+14. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+You have to make k8s-node-01 unavailable for new deployments. Please perform required steps without interrupting existing deployments.
+
+---
+
+# Use the command kubectl cordon  to make the node unavailable. Not that this will not evict existing pods.
+# If you use drain command then it will make the node unavailable but also evict the pods from that node. [used to updade cluster]
+
+ kubectl cordon k8s-node-01
+ 
+ 15. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a service called webapp-svc listening on port 8080 . Deploy a pod with label app=web and image nginx as backend of the service. Deploy an Ingress called webapp-ingress and map it with the service webapp-svc on path /web
+
+* Create necessary dependent resources
+
+k expose pod nginx  --name webapp-svc --port 8080
+
+k run nginx --image nginx --label app=web
+
+vim ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webapp-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /web
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-svc
+            port:
+              number: 8080
+ 
+ k apply -f ingress.yaml
+ 
+ 
+ 16. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+List all nodes sorted by CPU capacity and store the output in /tmp/nodes-capacity.txt
+ 
+ 
+---
+
+k get nodes --sort-by=.status.capacity.cpu >> /tmp/nodes-capacity.txt
+
+17. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+List all the Server Certificates and CA Certificates used in the cluster along with their expiry date. Save the output to /tmp/all-certs.txt
+
+---
+
+ kubeadm alpha certs check-expiration > /tmp/all-certs.txt
+
+18. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+worker node: k8s-node-02
+
+Perform required steps to deploy new pods with label env=prod ONLY on k8s-node-01.
+
+---
+# Every  node in the cluster is assigned a default label called kubernetes.io/hostname with value as the name of the node.
+# You can use nodeSelector with the default node label to schedule pods with specific label to be deployed on specific node.
+# Also, do note that this question does NOT prevent any other pods to be scheduled on the node k8s-node-01. So we don’t need to use NodeAffinity in this case.
+
+kubectl taint nodes k8s-node-01 env=prod:NoSchedule
+
+19. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Find expiry date of etcd CA certificate and write that to file /tmp/etcd-ca-expiry.txt
+
+---
+
+ openssl x509 -in /etc/kubernetes/pki/etcd/ca.crt --text --noout | grep -i "not after" > /tmp/etcd-ca-expiry.txt
+
+20. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a pod with specific volume type which only exists as long as Pod is running on that node.
+
+Additional configuration:
+
+Pod name: vol-test-pod
+
+Namespace: web
+
+Mount Point: /var/www/html
+
+Image: nginx
+
+---
+
+vim vol-test-pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vol-test-pod
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    volumeMounts:
+    - mountPath: /var/www/html
+      name: vol-test
+  volumes:
+  - name: vol-test
+  emptyDir: {}
+  
+k apply -f   vol-test-pod.yaml
+
+
+
+
+
+
+
+
+
+
