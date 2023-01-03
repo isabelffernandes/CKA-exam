@@ -1,0 +1,112 @@
+31. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create secure environment variables and configure the pod as per below specifications:
+
+pod name: secure-pod
+
+Image: busybox
+
+Environment Variables:
+
+Key             Value
+
+username   admin
+
+password   cka@2020!
+
+k run secure-pod --image busybox --dry-run=client -o yaml >> secure-pod.yaml
+vim  secure-pod.yaml
+
+#add
+
+    env:
+    - name: username
+      value: admin
+    - name: password
+      value: cka@2020!
+      
+---
+
+32. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+List all deployments running in ALL namespaces. ONLY display deployment name, namespace name and image name of the FIRST container. Save the output to /tmp/all-deployments.txt
+
+Output should look similar to the sample shown below:
+
+NAME   NAMESPACE   IMAGE_NAME
+
+app1         default               nginx
+
+k get deploy -A -o=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace,IMAGE:.spec.template.spec.containers[0].image > /tmp/all-deployments.txt
+kubectl get deployments -A -o=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace,IMAGE:..image > /tmp/all-deployments.txt
+
+---
+
+33. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a role called dev-user-role in the dev namespace which can list all the pods and deployments Create necessary role binding for service account dev-sa
+
+k create ns dev
+k create role dev-user-role -n dev --verb=list,get --resource=deployment
+
+k get sa
+k create sa dev-sa
+
+kubectl create rolebinding --help
+kubectl create rolebinding NAME --clusterrole=NAME|--role=NAME
+[--user=username] [--group=groupname]
+[--serviceaccount=namespace:serviceaccountname] [--dry-run=server|client|none]
+[options]
+
+k create rolebinding dev-user-rolebinding  --role=dev-user-role --serviceaccount=dev:sa -n dev 
+
+---
+
+34. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Taint the node k8s-node-01 with key equals to env, value equals to dev and effect set to NoSchedule.
+
+Now do necessary configuration so that ONLY pods with label tier=backend should get deployed to node k8s-node-01
+
+k taint node k8s-node-01 env=dev:NoSchedule
+
+k label node k8s-node-01 tier=backend
+
+# add nodeaffinity or nodeName
+
+nodeName: k8s-node-01
+
+
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: tier
+            operator: In
+            values:
+            - backend            
+  
+
+ 
