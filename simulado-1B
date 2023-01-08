@@ -474,7 +474,358 @@ List out all the iptables rules defined for ALL services running in the cluster.
 
  iptables-save > /tmp/iptables-rules.txt
  
+---
+
+49. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+List the DNS IP address(s) used by all pods in ALL namespaces. Save the output to /tmp/dns-ip.txt
+
+ Make a note of the IP address and write to the file /tmp/dns-ip.txt
  
+ ---
+ 
+ 50. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a NetworkPolicy called allow-port which allows access ONLY to port 8080.
+
+Note:
+
+1. Pods CANNOT communicate on any port other than 8080
+
+2. Pods running in ALL other namespaces can also access port 8080
+
+vim netpol.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-port
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+
+k create -f netpol.yaml
+---
+
+51. Question
+Describe all steps required to take etcd backup with below configuration and save the backup to /tmp/etcd-backup.db
+
+endpoints https://127.0.0.1:2379
+
+CA Cert /tmp/pki/etcd/ca.crt
+
+Server Cert /tmp/pki/etcd/server.crt
+
+Server Key /tmp/pki/etcd/server.key
+
+Check the status of the backup and write the output to /tmp/etcd-backup-status.txt in table format.
+
+# cd /etc/kubernetes/manifest
+
+ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+  --cacert=/tmp/pki/etcd/ca.crt --cert=<tmp/pki/etcd/server.crt --key=/tmp/pki/etcd/server.key \
+  snapshot save /tmp/etcd-backup.db
+  
+  ---
+  52. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a pod called front-app using nginx image. It should be accessible on local port 80 as well as on node’s port. Make sure the port should be same for all nodes in the cluster.
+          
+k run front-app --image nginx 
+k expose pod nginx --port 80 --type NodePort
+
+---
+
+53. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create deployment webapp in frontend namespace and scale it to 5 replicas. Use nginx image.
+
+Any change made to deployment should be recorded.
+
+k create deploy webapp  --image nginx -n frontend --replicas 5 --record
+
+---
+
+54. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a namespace called admin1234
+
+k create ns admin1234
+
+---
+
+55. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Deploy a pod called secure-pod in secure namespace with image busybox which sleeps for 2600 seconds.
+
+Configure the pod with environment variable called ENV_NAME and read the value from a ConfigMap. Set the environment value to prod.
+
+Test that the environment variable is created and available for the container.
+
+* Create all dependent resources
+
+k create ns secure
+
+vim sec-pod.yaml
+
+apiVersion: v1
+  
+kind: Pod
+  
+metadata:
+  
+  name: secure-pod
+  namespace: secure
+  
+spec:
+  
+  containers:
+  
+    - name: busybox-container
+  
+      image: busybox
+  
+      command: [ "sleep", 2600 ]
+      env: 
+       - name:  ENV_NAME 
+      valueFrom:
+      - configMapKeyRef:
+  
+          name: secure-config
+          key: env 
+  
+  restartPolicy: Never
+  
+  k create -f sec-pod.yaml
+
+ 
+---
+
+56. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+List name of all nodes as per below format and save the output in /tmp/node-names.txt file.
+
+NODE_NAME
+
+  node01
+
+  node02
+  
+   kubectl get nodes -o=custom-columns=NODE_NAME:.metadata.name > /tmp/node-names.txt
+   
+   ---
+   
+   
+   57. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+How many nodes exist without label node-role.kubernetes.io/master? Count the number and write in file /tmp/node-count.txt
+  
+  k get noddes
+  k describe node [node_name]
+  look ate label count  and write at /tmp/node-count.txt as eco [number] >> /tmp/node-count.txt
+  
+   kubectl get nodes --selector='!node-role.kubernetes.io/master' | grep -i name -v | wc -l > /tmp/node-count.txt
+   
+   ---
+   
+   58. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Deploy an Ingress resource called wildcard-host-ingress with following configuration:
+
+Host *.video.example.com
+
+Service video-service
+
+Path /
+
+Port 8080
+
+———————————————————————–
+
+Host *.web.example.com
+
+Path /
+
+Service web-service
+
+Port 9090
+
+vim ing.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wildcard-host-ingress
+spec:
+  ingressClassName: nginx-example
+  rules:
+  host: *.video.example.com
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name:  video-service
+            port:
+              number: 8080
+  host: *.web.example.com
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-service
+            port:
+              number: 9090
+
+k create -f ing.yaml
+
+---
+
+59. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a NetworkPolicy called deny-outgoing which does NOT allow any outgoing traffic from secure namespace
+
+vim np.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-outgoing
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - from:
+        - namespaceSelector: {}
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 80
+          
+ ---
+ 
+ 60. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create PersistentVolume called pv-wait that can only be provisioned and mapped when a PersistentVolumeClaim is created which is further consumed by Pod.
+
+*Create necessary dependent resources.
+
+Create custom StorageClass
+
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-wait 
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: pv-stg
+  
+  
+ apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: pv-stg
+  
+  apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: pv-stg
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+mountOptions:
+  - debug
+volumeBindingMode: Immediate
+  
+          
+          
+
+
 
 
 
