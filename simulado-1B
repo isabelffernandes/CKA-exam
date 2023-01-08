@@ -108,5 +108,379 @@ spec:
             values:
             - backend            
   
+  ---
+  
+  34. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Taint the node k8s-node-01 with key equals to env, value equals to dev and effect set to NoSchedule.
+
+Now do necessary configuration so that ONLY pods with label tier=backend should get deployed to node k8s-node-01
+
+k taint node k8s-node-01 env=dev:NoSchedule
+
+---
+
+Question 35 of 60
+35. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Deploy a service called my-web-svc in the alpha namespace listening on port 8080. Use nginx image to deploy backend pods.
+
+Try to resolve the service and save the output to /tmp/svc-lookup.txt
+
+Also, resolve the pod associated with the service and save the output to /tmp/pod-lookup.txt
+
+Run a test pod to perform lookup operations.
+
+k create ns alpha
+k get ns
+
+k run nginx -image nginx  -n alpha --dry-run=client -o yaml > nginx.yaml
+k create -f nginx.yaml
+k expose pod nginx --name my-web-svc --port 8080 -n alpha >> /tmp/svc-lookup.txt 
+[kubectl exec -i -t dnsutils -- nslookup my-web-svc.alpha]
+ kubectl run testpod --image=nginx --rm -it -- nslookup pod-ip-address.alpha.pod.cluster.local > /tmp/pod-lookup.txt
+
+---
+
+ 36. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a service called test-svc-1 listening on local port 80 and node’s port 30080. Use pods with label app=test for this service. The service must have 2 pods available at the minimum with nginx image.
+
+kubectl expose (-f FILENAME | TYPE NAME) [--port=port]
+[--protocol=TCP|UDP|SCTP] [--target-port=number-or-name] [--name=name]
+[--external-ip=external-ip-of-service] [--type=type] [options]
+
+k run nginx --image nginx --replicas 2
+k label pod nginx -l app=test 
+k expose pod nginx --name test-svc-1 --tagert-port 80 --type=NodePort
+
+---
+
+37. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a pod called secure-admin with user id set to 1000. Make this setting DEFAULT for ALL containers and use busybox image with sleep command set to 1200 seconds
+ 
+ vim secure-admin.yaml
+ 
+ apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-admin
+spec:
+  securityContext:
+    runAsUser: 1000
+  containers:
+  - name: busybox
+    image: busybox
+    command: ["sleep", 1200]
+    ports:
+    - containerPort: 80
+
+k create -f secure-admin.yaml
+
+---
+
+38. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+List all container images of all pods running in all namespaces and save the output to /tmp/container-images.txt
+
+ kubectl get pods -A -o=jsonpath='{range .items[*]}{range .spec.containers[*]}{.image}{"\n"}{end}{end}'
+ 
+---
+
+39. Question
+Let’s assume you have etcd backup stored at location /tmp/etcd-snapshot.db. What are the correct steps to restore the etcd backup with following configuration:
+
+Default certificate and key files
+
+Use localhost endpoints
+
+ kubectl describe pod -n kube-system
+ETCDCTL_API=3 etcdctl snapshot restore --data-dir /tmp/etcd-snapshot.db snapshotdb
+ETCDCTL_API=3 etcdctl --endpoints 10.2.0.9:2379 snapshot restore snapshotdb
+
+---
+
+40. Question
+Lab Environment:
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Label the node node k8s-node-01 with key equals to disk and value equals to ssd. Deploy new pods using this label.
+
+k label node k8s-node-01  disk=ssd
+#nodeSelector: disk: ssd
+
+---
+
+41. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create a deployment called secure-app in secure namespace. Make sure all containers run with user id 10000 without configuring this setting at container level. Also, containers should NOT be allowed privileged escalation.
+
+Use busybox image for this deployment.
+
+kubectl create deployment secure-app –image=busybox –command sleep 1200 -n secure –dry-run=client -o yaml > secure-app.yaml
+Edit secure-app.yaml and add securityContext related configuration.
+
+spec:
+  securityContext:
+    runAsUser: 1000
+
+---
+    
+43. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+List all the endpoints in kube-system namespace and save the output to /tmp/endpoints.txt    
+
+k get endpoints -n kube-system  >> /tmp/endpoints.txt   
+
+---
+
+44. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create necessary configuration so that all pods with label app=nginx can only be deployed on node k8s-node-01.
+
+Use nginx image for pods. Label the node with label env=dev
+
+Note:
+
+These pods should be preferred to be deployed on node k8s-node-01
+
+Node Affinity, Labels & Selectors are used to define how and where pods should be scheduled.
+
+k run nginx --image nginx --label=app=nginx  --dry-run=client -o yaml >> app.yaml
+
+vim app.yaml
+# add
+nodeName: k8s-node-01
+
+k label node k8s-node-01 env=dev 
+
+---
+
+45. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+Create 5 PersistentVolume with storage set to 8Mi, 8Gi, 1Gi, 1Mi and 10Gi. Now list all volumes in following format and  sort the volumes based on their capacity and save the output to /tmp/pv-capacity.txt
+
+VOLUME_NAME  CAPACITY  NAMESPACE
+
+Use template provided below to create PersistentVolume. Keep any random name for each volume.
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+name: pv0001
+labels:
+type: local
+spec:
+storageClassName: manual
+capacity:
+storage: 10Gi
+accessModes:
+– ReadWriteOnce
+hostPath:
+path: “/mnt/data”
+
+
+vim pv1.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+name: pv1
+labels:
+type: local
+spec:
+storageClassName: manual
+capacity:
+storage: 10Gi
+accessModes:
+– ReadWriteOnce
+hostPath:
+path: “/mnt/data”
+
+k create -f pv1.yaml
+
+vim pv2.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+name: pv2
+labels:
+type: local
+spec:
+storageClassName: manual
+capacity:
+storage: 1Gi
+accessModes:
+– ReadWriteOnce
+hostPath:
+path: “/mnt/data”
+
+k create -f pv2.yaml
+
+vim pv3.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+name: pv3
+labels:
+type: local
+spec:
+storageClassName: manual
+capacity:
+storage: 1Mi
+accessModes:
+– ReadWriteOnce
+hostPath:
+path: “/mnt/data”
+
+k create -f pv3.yaml
+
+vim pv4.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+name: pv4
+labels:
+type: local
+spec:
+storageClassName: manual
+capacity:
+storage: 8Mi
+accessModes:
+– ReadWriteOnce
+hostPath:
+path: “/mnt/data”
+
+k create -f pv4.yaml
+
+vim pv5.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+name: pv5
+labels:
+type: local
+spec:
+storageClassName: manual
+capacity:
+storage: 8Gi
+accessModes:
+– ReadWriteOnce
+hostPath:
+path: “/mnt/data”
+
+k create -f pv5.yaml
+
+k get pv
+
+kubectl get pv -o=custom-columns=VOLUME_NAME:.metadata.name,CAPACITY:.spec.capacity.storage,NAMESPACE:.metadata.namespace --sort-by=.spec.capacity.storage > /tmp/pv-capacity.txt
+
+---
+
+46. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+List all the pods running in ALL namespaces in following format and save the file to /tmp/all-pods.txt
+
+POD_NAME    NAMESPACE    NODE_NAME
+
+ kubectl get pods -A -o=custom-columns=POD_NAME:.metadata.name,NAMESPACE:.metadata.namespace,NODE_NAME:.spec.nodeName > /tmp/all-pods.txt
+ 
+ ---
+ 
+ 47. Question
+ Describe all steps required to restore existing etcd backup stored at /tmp/etcd-pre-snapshot.db. Use following information for restore:
+
+endpoints https://127.0.0.1:2379
+
+CA Cert /tmp/pki/etcd/ca.crt
+
+Server Cert /tmp/pki/etcd/server.crt
+
+Server Key /tmp/pki/etcd/server.key
+
+
+ETCDCTL_API=3 etcdctl --endpoints=https://127.0.0.1:2379 \
+  --cacert=/tmp/pki/etcd/ca.crt--cert=/tmp/pki/etcd/server.crt --key=/tmp/pki/etcd/server.key\
+  snapshot save /tmp/etcd-pre-snapshot.db
+  
+  ---
+  
+  48. Question
+Lab Environment
+
+master node: k8s-master
+
+worker node: k8s-node-01
+
+List out all the iptables rules defined for ALL services running in the cluster. Save the output to /tmp/iptables-rules.txt
+
+ iptables-save > /tmp/iptables-rules.txt
+ 
+ 
+
+
+
+
+
+
+
 
  
